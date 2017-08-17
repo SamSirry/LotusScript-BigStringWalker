@@ -5,14 +5,24 @@ Superior speed! Tested with strings up to 60 Million characters in size. Estimat
 
 Running the following sample code using Mid$() to extract indivdual characters can take 10s of magnitude more time to complete.
 
+
 Sample code:
+
 'This code loads a big string, then processes it character by character:
+
 Dim BSW As New BigStringWalker
+
 BSW.Load(MyBigString)
 
+
 Dim x As Long
+
 Dim Char As String
+
 For x = 0 To BSW.Size-1
+
   Char = BSW.CharAt(x)
+
   Call ProcessChar(Char)
+
 Next

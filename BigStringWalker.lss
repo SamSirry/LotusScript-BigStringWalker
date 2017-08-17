@@ -101,11 +101,20 @@ SplitToChars:
 			LenLastIndex = Len(Chars(LastIndex))
 		End If
 		
+		'fill up any remaining space in the last used array element.
 		LenPart = Len(Part)
 		If LenLastIndex < ElementSize Then
-			Chars(LastIndex) = Chars(LastIndex) & Left$(Part, ElementSize-LenLastIndex)
-			Part = Right$(Part, LenPart - (ElementSize-LenLastIndex))
-			LenPart = Len(Part)
+			Dim remaining As Long
+			remaining = ElementSize-LenLastIndex
+			If LenPart > remaining then
+				Chars(LastIndex) = Chars(LastIndex) & Left$(Part, ElementSize-LenLastIndex)
+				Part = Right$(Part, LenPart - (ElementSize-LenLastIndex))
+				LenPart = Len(Part)
+			Else
+				Chars(LastIndex) = Chars(LastIndex) & Part
+				Part = ""
+				LenPart = 0
+			End if
 		End If
 		
 		If LenPart = 0 Then GoTo Quit

@@ -1,0 +1,172 @@
+%REM
+	Class BigStringWalker
+	Created Aug 17, 2017 by Sam Sirry
+	Description: Very fast Mid$() alternative for LotusScript for working with large Strings.
+%END REM
+Public Class BigStringWalker
+	Private Chars() As String
+	Private ElementSize As Long	'the minimum length of each array element, in order to contain the whole big string.
+	Private LenBSTotal As Long
+	Private HighestUsedIndex As Long	'the index of the last used element in the internal array (Chars).
+	
+	'const:
+	Private MinBound As Long
+	Private MaxBound As Long
+	
+	
+	Sub New()
+		ReDim Chars(0 To 0)
+		MinBound = -32768
+		MaxBound =  32767
+	End Sub
+	
+	Public Sub Load(BigString As String)
+		LenBSTotal = Len(BigString)
+		If LenBSTotal = 0 Then
+			ReDim Chars(0 To 0)
+			ElementSize = 0
+		 Exit Sub
+		End If
+
+		ElementSize = Fix(LenBSTotal/(MaxBound - MinBound))
+		If Fraction(LenBSTotal/(MaxBound - MinBound)) > 0 Then
+			ElementSize = ElementSize +1
+		End If
+		
+		If ElementSize = 1 Then
+			ReDim Chars(MinBound To (MinBound + LenBSTotal - 1))
+		Else
+			ReDim Chars(MinBound To MaxBound)
+		End If
+		
+		Dim LastIndex As Long
+		Lastindex = MinBound -1
+		Call Load_Internal(BigString, LastIndex, 1)
+		HighestUsedIndex = LastIndex
+	End Sub
+	
+	%REM
+		Sub Load_Internal
+		Created Aug 17, 2017 by Sam Sirry
+		Description: Recursive proc for chunking the big string and filling up the array
+	%END REM
+	Private Sub Load_Internal(BigString As String, LastIndex As Long, ByVal HowDeep As Long)
+		
+		Const MinChunkSize = 512	'at which length we stop recursive calling and start processing the part in hand
+
+		Dim LenBS As Long
+		Dim PartsCount
+
+		LenBS = Len(BigString)
+		
+		If LenBS <= ElementSize Then GoTo SplitToChars
+		If LenBS <= MinChunkSize Then GoTo SplitToChars
+		
+		If HowDeep < 1 Then HowDeep = 1
+		PartsCount = 8 * HowDeep
+		
+		Dim Part As String
+		Dim PartSize As Long
+		
+		Dim SizeInSingle As Single
+		SizeInSingle = LenBS/PartsCount
+	
+		PartSize = Fix(SizeInSingle)
+		If Fraction(SizeInSingle) > 0 Then
+			PartSize = PartSize + 1
+		End If
+		
+		Dim i As Long
+		Dim start As Long
+		start = 1
+		For i = 1 To PartsCount
+			If start > LenBS Then Exit For
+			Part = Mid$(BigString, start, PartSize)
+			Call me.Load_Internal(Part, LastIndex, HowDeep +1)
+			Part = "" 'free mem
+			start = start + PartSize ' ((i-1) * PartSize)
+		Next
+		
+		GoTo Quit
+		
+SplitToChars:
+		'When we're here BigString isn't really big anymore.
+		Part = BigString	'make a local copy to work on
+		Dim LenLastIndex As Long
+		Dim LenPart As Long
+		
+		If LastIndex < MinBound Then
+			LenLastIndex = ElementSize
+		Else
+			LenLastIndex = Len(Chars(LastIndex))
+		End If
+		
+		LenPart = Len(Part)
+		If LenLastIndex < ElementSize Then
+			Chars(LastIndex) = Chars(LastIndex) & Left$(Part, ElementSize-LenLastIndex)
+			Part = Right$(Part, LenPart - (ElementSize-LenLastIndex))
+			LenPart = Len(Part)
+		End If
+		
+		If LenPart = 0 Then GoTo Quit
+		
+		Dim PartsInSingle As Single
+		PartsInSingle = LenPart / ElementSize
+		
+		PartsCount = Fix(LenPart / ElementSize)
+		If Fraction(PartsInSingle) > 0 Then
+			PartsCount = PartsCount + 1
+		End If
+		
+		start = 1
+		For i = 1 To PartsCount
+			LastIndex = LastIndex + 1
+			Chars(LastIndex) = Mid$(Part, start, ElementSize)
+			
+			start = start + ElementSize '((i-1) * ElementSize)
+		Next
+Quit:
+	
+	End Sub
+	
+	%REM
+		Function CharAt
+		Created Aug 17, 2017 by Sam Sirry
+		Description: Returns a single character ***Index is Zero-Based***
+	%END REM
+	Public Function CharAt(ByVal index As Long) As String
+		If ElementSize = 0 Then Exit Function
+		If index > LenBSTotal-1 Then Exit Function
+		
+		If ElementSize = 1 Then
+			CharAt = Chars(MinBound + index)
+		Else
+			
+		
+			Dim arrindex As Long
+			arrindex = Fix(index/ElementSize)
+			index = index Mod ElementSize
+		
+			CharAt = Mid$(Chars(MinBound + arrindex), index+1, 1)
+		
+		End If
+	End Function
+	
+	%REM
+		Function FullString
+		Created Aug 17, 2017 by Sam Sirry
+		Description: Returns the full original string
+	%END REM
+	Public Function FullString As String
+		FullString = Join(Chars, "")
+	End Function
+	
+	%REM
+		Property Get Size
+		Created Aug 17, 2017 by Sam Sirry
+		Description: The number of characters in the string.
+	%END REM
+	Public Property Get Size As Long
+		Size = LenBSTotal
+	End Property
+End Class

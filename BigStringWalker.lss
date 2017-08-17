@@ -84,7 +84,7 @@ Public Class BigStringWalker
 			Part = Mid$(BigString, start, PartSize)
 			Call me.Load_Internal(Part, LastIndex, HowDeep +1)
 			Part = "" 'free mem
-			start = start + PartSize ' ((i-1) * PartSize)
+			start = start + PartSize
 		Next
 		
 		GoTo Quit
@@ -123,7 +123,7 @@ SplitToChars:
 			LastIndex = LastIndex + 1
 			Chars(LastIndex) = Mid$(Part, start, ElementSize)
 			
-			start = start + ElementSize '((i-1) * ElementSize)
+			start = start + ElementSize
 		Next
 Quit:
 	

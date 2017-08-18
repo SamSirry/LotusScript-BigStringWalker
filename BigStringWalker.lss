@@ -14,18 +14,21 @@ Public Class BigStringWalker
 	Private MaxBound As Long
 	
 	
-	Sub New()
+	Sub New(BigString As String)
 		ReDim Chars(0 To 0)
 		MinBound = -32768
 		MaxBound =  32767
+		
+		Call Load(BigString)
 	End Sub
 	
 	Public Sub Load(BigString As String)
 		LenBSTotal = Len(BigString)
 		If LenBSTotal = 0 Then
-			ReDim Chars(0 To 0)
-			ElementSize = 0
-		 Exit Sub
+			ElementSize = 1
+			ReDim Chars(MinBound To MinBound)
+			HighestUsedIndex = MinBound
+			Exit Sub
 		End If
 
 		ElementSize = Fix(LenBSTotal/(MaxBound - MinBound))
@@ -70,7 +73,7 @@ Public Class BigStringWalker
 		
 		Dim SizeInSingle As Single
 		SizeInSingle = LenBS/PartsCount
-	
+		
 		PartSize = Fix(SizeInSingle)
 		If Fraction(SizeInSingle) > 0 Then
 			PartSize = PartSize + 1
@@ -106,7 +109,7 @@ SplitToChars:
 		If LenLastIndex < ElementSize Then
 			Dim remaining As Long
 			remaining = ElementSize-LenLastIndex
-			If LenPart > remaining then
+			If LenPart > remaining Then
 				Chars(LastIndex) = Chars(LastIndex) & Left$(Part, ElementSize-LenLastIndex)
 				Part = Right$(Part, LenPart - (ElementSize-LenLastIndex))
 				LenPart = Len(Part)
@@ -114,7 +117,7 @@ SplitToChars:
 				Chars(LastIndex) = Chars(LastIndex) & Part
 				Part = ""
 				LenPart = 0
-			End if
+			End If
 		End If
 		
 		If LenPart = 0 Then GoTo Quit
@@ -135,32 +138,18 @@ SplitToChars:
 			start = start + ElementSize
 		Next
 Quit:
-	
+		
 	End Sub
 	
 	%REM
-		Function CharAt
+		Property Get Size
 		Created Aug 17, 2017 by Sam Sirry
-		Description: Returns a single character ***Index is Zero-Based***
+		Description: The number of characters in the string.
 	%END REM
-	Public Function CharAt(ByVal index As Long) As String
-		If ElementSize = 0 Then Exit Function
-		If index > LenBSTotal-1 Then Exit Function
-		
-		If ElementSize = 1 Then
-			CharAt = Chars(MinBound + index)
-		Else
-			
-		
-			Dim arrindex As Long
-			arrindex = Fix(index/ElementSize)
-			index = index Mod ElementSize
-		
-			CharAt = Mid$(Chars(MinBound + arrindex), index+1, 1)
-		
-		End If
-	End Function
-	
+	Public Property Get Size As Long
+		Size = LenBSTotal
+	End Property
+
 	%REM
 		Function FullString
 		Created Aug 17, 2017 by Sam Sirry
@@ -171,11 +160,135 @@ Quit:
 	End Function
 	
 	%REM
-		Property Get Size
-		Created Aug 17, 2017 by Sam Sirry
-		Description: The number of characters in the string.
+		Function IsValidStringIndex
+		Created Aug 18, 2017 by Sam Hbous/Yusran
+		Description: 
 	%END REM
-	Public Property Get Size As Long
-		Size = LenBSTotal
-	End Property
+	Private Function IsValidStringIndex(ByVal StringIndex As Long) As Boolean
+		If LenBSTotal = 0 And Stringindex = 0 Then
+			IsValidStringIndex = True
+			
+		ElseIf ElementSize = 0 Then
+			IsValidStringIndex = False
+			
+		ElseIf StringIndex < 0 Then
+			IsValidStringIndex = False
+		
+		ElseIf StringIndex > (LenBSTotal-1) Then
+			IsValidStringIndex = False
+			
+		Else
+			IsValidStringIndex = True
+		End If
+	End Function
+	%REM
+		Function ArrayIndexOfStringIndex
+		Created Aug 18, 2017 by Sam Hbous/Yusran
+		Description: This proc does no validation of input. Caller must valdate before calling.
+	%END REM
+	Private Function ArrayIndexOfStringIndex(ByVal StringIndex As Long) As Long
+	%REM
+		If LenBSTotal = 0 And Stringindex = 0 Then
+			ArrayIndexOfStringIndex = MinBound
+			Exit function
+		End If
+		
+		If ElementSize = 0 Then Error 5, "This object instance is not yet initialized."
+		If StringIndex < 0 Then Error 5, "The StringIndex may not be negative."
+		If StringIndex > (LenBSTotal-1) Then Error 5, "The StringIndex is beyond the loaded string's size."
+	%END REM
+		
+		ArrayIndexOfStringIndex = MinBound + Fix(StringIndex/ElementSize)
+	End Function
+	
+	%REM
+		Function CharAt
+		Created Aug 17, 2017 by Sam Sirry
+		Description: Returns a single character ***Index is Zero-Based***
+	%END REM
+	Public Function CharAt(ByVal StringIndex As Long) As String
+		%REM
+		If LenBSTotal = 0 Then Exit Function
+		If index < 0 Then Error 5, "The index may not be negative."
+		%END REM
+		If Not IsValidStringIndex(StringIndex) Then
+			Error 5, "The StringIndex value is not valid, or this object's instance is not initialized."
+			Exit Function
+		End If
+		
+		
+		If StringIndex > LenBSTotal-1 Then Exit Function
+		
+		If ElementSize = 1 Then
+			CharAt = Chars(ArrayIndexOfStringIndex(StringIndex))
+		Else
+			Dim charindex As Long
+			charindex = StringIndex Mod ElementSize
+			
+			CharAt = Mid$(Chars(ArrayIndexOfStringIndex(StringIndex)), charindex+1, 1)
+		End If
+	End Function
+	
+	
+	%REM
+		Function SubString
+		Created Aug 18, 2017 by Sam Hbous/Yusran
+		Description: 
+	%END REM
+	Public Function SubString(ByVal start_idx As Long, ByVal end_idx As Long) As String
+		Dim firstElement As Long
+		Dim lastElement As Long
+		
+		If Not IsValidStringIndex(start_idx) Then
+			Error 5, "The start_idx value is not valid."
+			Exit Function
+		End If
+		
+		If start_idx = end_idx Then Exit Function
+		If end_idx < start_idx Then Error 5, "end_idx may not be smaller than start_idx."
+		If end_idx - start_idx = 1 Then
+			SubString = me.CharAt(start_idx)
+		End If
+		
+		firstElement = ArrayIndexOfStringIndex(start_idx)
+		lastElement = ArrayIndexOfStringIndex(end_idx)
+		If lastElement > HighestUsedIndex Then
+			lastElement = HighestUsedIndex
+			end_idx = LenBSTotal-1 +1	'+1 is added because when start=end the return is nothing.
+		End If
+		
+		Dim sb As New Buffer
+		Dim charindex As Long
+		
+		If firstElement = lastElement Then
+			charindex = start_idx Mod ElementSize
+			SubString = Mid$(Chars(firstElement), charindex+1, (end_idx - start_idx))
+		Else
+			charindex = start_idx Mod ElementSize
+			
+			Call sb.append(Mid$(Chars(firstElement), charindex+1))
+			
+			Dim i As Long
+			For i = (firstElement+1) To (lastElement-1)
+				Call sb.append(Chars(i))
+			Next
+			
+			charindex = end_idx Mod ElementSize
+			Call sb.append(Left$(Chars(lastElement), charindex))
+			SubString = sb.toString()
+		End If
+		
+	End Function
+	
+	%REM
+		Function Slice
+		Created Aug 18, 2017 by Sam Hbous/Yusran
+		Description: 
+	%END REM
+	Public Function Slice(ByVal start_idx As Long, ByVal size As Long) As String
+		Dim end_idx As Long
+		end_idx = start_idx + size
+		Slice = SubString(start_idx, end_idx)
+	End Function
+	
 End Class

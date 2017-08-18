@@ -161,7 +161,7 @@ Quit:
 	
 	%REM
 		Function IsValidStringIndex
-		Created Aug 18, 2017 by Sam Hbous/Yusran
+		Created Aug 18, 2017 by Sam Sirry
 		Description: 
 	%END REM
 	Private Function IsValidStringIndex(ByVal StringIndex As Long) As Boolean
@@ -183,7 +183,7 @@ Quit:
 	End Function
 	%REM
 		Function ArrayIndexOfStringIndex
-		Created Aug 18, 2017 by Sam Hbous/Yusran
+		Created Aug 18, 2017 by Sam Sirry
 		Description: This proc does no validation of input. Caller must valdate before calling.
 	%END REM
 	Private Function ArrayIndexOfStringIndex(ByVal StringIndex As Long) As Long
@@ -232,8 +232,8 @@ Quit:
 	
 	%REM
 		Function SubString
-		Created Aug 18, 2017 by Sam Hbous/Yusran
-		Description: 
+		Created Aug 18, 2017 by Sam Sirry
+		Description: Returns a part of the BigString. indexes are zero-based. when start index = end index the return is empty string.
 	%END REM
 	Public Function SubString(ByVal start_idx As Long, ByVal end_idx As Long) As String
 		Dim firstElement As Long
@@ -282,8 +282,8 @@ Quit:
 	
 	%REM
 		Function Slice
-		Created Aug 18, 2017 by Sam Hbous/Yusran
-		Description: 
+		Created Aug 18, 2017 by Sam Sirry
+		Description: Returns a part of the BigString. start index is zero-based. size is the number of characters to be returned.
 	%END REM
 	Public Function Slice(ByVal start_idx As Long, ByVal size As Long) As String
 		Dim end_idx As Long

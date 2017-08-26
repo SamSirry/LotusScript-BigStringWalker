@@ -30,9 +30,9 @@ Public Class BigStringWalker
 			HighestUsedIndex = MinBound
 			Exit Sub
 		End If
-
-		ElementSize = Fix(LenBSTotal/(MaxBound - MinBound))
-		If Fraction(LenBSTotal/(MaxBound - MinBound)) > 0 Then
+		
+		ElementSize = Fix(LenBSTotal/(MaxBound - MinBound +1))
+		If Fraction(LenBSTotal/(MaxBound - MinBound +1)) > 0 Then
 			ElementSize = ElementSize +1
 		End If
 		
@@ -48,18 +48,21 @@ Public Class BigStringWalker
 		HighestUsedIndex = LastIndex
 	End Sub
 	
-	%REM
+%REM
 		Sub Load_Internal
 		Created Aug 17, 2017 by Sam Sirry
 		Description: Recursive proc for chunking the big string and filling up the array
-	%END REM
+%END REM
 	Private Sub Load_Internal(BigString As String, LastIndex As Long, ByVal HowDeep As Long)
 		
-		Const MinChunkSize = 512	'at which length we stop recursive calling and start processing the part in hand
-
+		'MinChunkSize determines at which length we stop recursive calling and start processing the part in hand using Mid$() in a loop.
+		' smaller number means more iterations and recursive calls, but less Mid$() calls.
+		' so, it's call-stack vs Mid$()-calls balance. If set too small, may cause an Out of Stack Space error.
+		Const MinChunkSize = 128	
+		
 		Dim LenBS As Long
 		Dim PartsCount
-
+		
 		LenBS = Len(BigString)
 		
 		If LenBS <= ElementSize Then GoTo SplitToChars
@@ -85,7 +88,7 @@ Public Class BigStringWalker
 		For i = 1 To PartsCount
 			If start > LenBS Then Exit For
 			Part = Mid$(BigString, start, PartSize)
-			Call me.Load_Internal(Part, LastIndex, HowDeep +1)
+			Call Me.Load_Internal(Part, LastIndex, HowDeep +1)
 			Part = "" 'free mem
 			start = start + PartSize
 		Next
@@ -141,29 +144,29 @@ Quit:
 		
 	End Sub
 	
-	%REM
+%REM
 		Property Get Size
 		Created Aug 17, 2017 by Sam Sirry
 		Description: The number of characters in the string.
-	%END REM
+%END REM
 	Public Property Get Size As Long
 		Size = LenBSTotal
 	End Property
-
-	%REM
+	
+%REM
 		Function FullString
 		Created Aug 17, 2017 by Sam Sirry
 		Description: Returns the full original string
-	%END REM
+%END REM
 	Public Function FullString As String
 		FullString = Join(Chars, "")
 	End Function
 	
-	%REM
+%REM
 		Function IsValidStringIndex
 		Created Aug 18, 2017 by Sam Sirry
 		Description: 
-	%END REM
+%END REM
 	Private Function IsValidStringIndex(ByVal StringIndex As Long) As Boolean
 		If LenBSTotal = 0 And Stringindex = 0 Then
 			IsValidStringIndex = True
@@ -173,7 +176,7 @@ Quit:
 			
 		ElseIf StringIndex < 0 Then
 			IsValidStringIndex = False
-		
+			
 		ElseIf StringIndex > (LenBSTotal-1) Then
 			IsValidStringIndex = False
 			
@@ -181,36 +184,25 @@ Quit:
 			IsValidStringIndex = True
 		End If
 	End Function
-	%REM
+%REM
 		Function ArrayIndexOfStringIndex
 		Created Aug 18, 2017 by Sam Sirry
 		Description: This proc does no validation of input. Caller must valdate before calling.
-	%END REM
+%END REM
 	Private Function ArrayIndexOfStringIndex(ByVal StringIndex As Long) As Long
-	%REM
-		If LenBSTotal = 0 And Stringindex = 0 Then
-			ArrayIndexOfStringIndex = MinBound
-			Exit function
-		End If
-		
-		If ElementSize = 0 Then Error 5, "This object instance is not yet initialized."
-		If StringIndex < 0 Then Error 5, "The StringIndex may not be negative."
-		If StringIndex > (LenBSTotal-1) Then Error 5, "The StringIndex is beyond the loaded string's size."
-	%END REM
-		
 		ArrayIndexOfStringIndex = MinBound + Fix(StringIndex/ElementSize)
 	End Function
 	
-	%REM
+%REM
 		Function CharAt
 		Created Aug 17, 2017 by Sam Sirry
 		Description: Returns a single character ***Index is Zero-Based***
-	%END REM
+%END REM
 	Public Function CharAt(ByVal StringIndex As Long) As String
-		%REM
+%REM
 		If LenBSTotal = 0 Then Exit Function
 		If index < 0 Then Error 5, "The index may not be negative."
-		%END REM
+%END REM
 		If Not IsValidStringIndex(StringIndex) Then
 			Error 5, "The StringIndex value is not valid, or this object's instance is not initialized."
 			Exit Function
@@ -230,11 +222,11 @@ Quit:
 	End Function
 	
 	
-	%REM
+%REM
 		Function SubString
 		Created Aug 18, 2017 by Sam Sirry
 		Description: Returns a part of the BigString. indexes are zero-based. when start index = end index the return is empty string.
-	%END REM
+%END REM
 	Public Function SubString(ByVal start_idx As Long, ByVal end_idx As Long) As String
 		Dim firstElement As Long
 		Dim lastElement As Long
@@ -244,47 +236,64 @@ Quit:
 			Exit Function
 		End If
 		
-		If start_idx = end_idx Then Exit Function
-		If end_idx < start_idx Then Error 5, "end_idx may not be smaller than start_idx."
+		If start_idx = end_idx Then Exit Function	'return empty string.
+		If end_idx > LenBSTotal Then
+			end_idx = LenBSTotal-1 +1	'+1 is added because when start=end the return is nothing.
+		End If
+		If end_idx < start_idx Then Error 5, "end_idx may not be smaller than start_idx."	'start_idx can't be past the bigstring length coz it's been validated earlier.
 		If end_idx - start_idx = 1 Then
-			SubString = me.CharAt(start_idx)
+			SubString = Me.CharAt(start_idx)
 		End If
 		
 		firstElement = ArrayIndexOfStringIndex(start_idx)
 		lastElement = ArrayIndexOfStringIndex(end_idx)
-		If lastElement > HighestUsedIndex Then
-			lastElement = HighestUsedIndex
-			end_idx = LenBSTotal-1 +1	'+1 is added because when start=end the return is nothing.
-		End If
 		
-		Dim sb As New Buffer
 		Dim charindex As Long
 		
 		If firstElement = lastElement Then
 			charindex = start_idx Mod ElementSize
 			SubString = Mid$(Chars(firstElement), charindex+1, (end_idx - start_idx))
 		Else
-			charindex = start_idx Mod ElementSize
-			
-			Call sb.append(Mid$(Chars(firstElement), charindex+1))
-			
 			Dim i As Long
-			For i = (firstElement+1) To (lastElement-1)
-				Call sb.append(Chars(i))
-			Next
-			
-			charindex = end_idx Mod ElementSize
-			Call sb.append(Left$(Chars(lastElement), charindex))
-			SubString = sb.toString()
+			'only use Buffer when necessary. This makes a big difference if the caller requests too many small substrings in a loop.
+			If lastElement - firstElement > 128 Then	'128 wasn't selected with any imperical study. it's purely based on personal estimation.
+				Dim sb As Buffer
+				Set sb = New Buffer
+				
+				charindex = start_idx Mod ElementSize
+				Call sb.append(Mid$(Chars(firstElement), charindex+1))
+				
+				For i = (firstElement+1) To (lastElement-1)
+					Call sb.append(Chars(i))
+				Next
+				
+				charindex = end_idx Mod ElementSize
+				If charindex > 0 Then Call sb.append(Left$(Chars(lastElement), charindex))
+				SubString = sb.toString()
+				
+			Else
+				Dim s_out As String
+				
+				charindex = start_idx Mod ElementSize
+				s_out = Mid$(Chars(firstElement), charindex+1)
+				
+				For i = (firstElement+1) To (lastElement-1)
+					s_out = s_out & Chars(i)
+				Next
+				
+				charindex = end_idx Mod ElementSize
+				If charindex > 0 Then s_out = s_out & Left$(Chars(lastElement), charindex)
+				SubString = s_out
+			End If
 		End If
 		
 	End Function
 	
-	%REM
+%REM
 		Function Slice
 		Created Aug 18, 2017 by Sam Sirry
 		Description: Returns a part of the BigString. start index is zero-based. size is the number of characters to be returned.
-	%END REM
+%END REM
 	Public Function Slice(ByVal start_idx As Long, ByVal size As Long) As String
 		Dim end_idx As Long
 		end_idx = start_idx + size

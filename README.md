@@ -9,22 +9,17 @@ Running the following sample code using Mid$() to extract indivdual characters c
 
 
 Sample code:
-
+```vb
 'This code loads a big string, then processes it character by character:
-
 Dim BSW As New BigStringWalker
 
 BSW.Load(MyBigString)
 
-
 Dim x As Long
-
 Dim Char As String
 
 For x = 0 To BSW.Size-1
-
   Char = BSW.CharAt(x)
-
   Call ProcessChar(Char)
-
 Next
+```
